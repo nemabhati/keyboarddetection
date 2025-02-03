@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/keyboarddetection/static/js/main.ba3aa1b3.js",
+    "index.html": "/keyboarddetection/index.html",
+    "main.ba3aa1b3.js.map": "/keyboarddetection/static/js/main.ba3aa1b3.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.ba3aa1b3.js"
+  ]
+}
