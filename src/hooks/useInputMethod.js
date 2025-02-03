@@ -4,14 +4,28 @@ const useInputMethod = () => {
   const [inputMethod, setInputMethod] = useState("Unknown");
   const [lastInputMethod, setLastInputMethod] = useState(null);
   const [isVirtualKeyboard, setIsVirtualKeyboard] = useState(false);
+  const [deviceType, setDeviceType] = useState("Unknown");
 
   useEffect(() => {
     let lastInputTime = 0;
-    let focusTimestamp = 0;
     let lastKeyWasComposition = false;
     const keyEventSources = new Set();
-    let consecutiveVirtualKeys = 0;
-    const VIRTUAL_KEY_THRESHOLD = 3;
+
+    // Detect device type based on various factors
+    const detectDeviceType = () => {
+      const ua = navigator.userAgent.toLowerCase();
+      const isMobile = /mobile|iphone|ipad|android/.test(ua);
+      const isTablet = /ipad|android/.test(ua) && !/mobile/.test(ua);
+      const isIPad = navigator.maxTouchPoints > 1 && /macintosh/.test(ua);
+      
+      if (isIPad || isTablet) {
+        return "Tablet";
+      } else if (isMobile) {
+        return "Mobile";
+      } else {
+        return "Desktop";
+      }
+    };
 
     // Check if device supports touch
     const isTouchDevice = () => {
@@ -22,23 +36,24 @@ const useInputMethod = () => {
       );
     };
 
-    // Check if device is a convertible/tablet
+    // Check if device is a convertible/tablet PC
     const isConvertibleDevice = () => {
+      const ua = navigator.userAgent;
       return (
         navigator.maxTouchPoints > 0 &&
-        /Windows/.test(navigator.userAgent) &&
-        (
-          /Touch/.test(navigator.userAgent) ||
-          /Tablet PC/.test(navigator.userAgent) ||
-          /convertible/i.test(navigator.userAgent)
-        )
+        /Windows/.test(ua) &&
+        (/Touch/.test(ua) || /Tablet PC/.test(ua) || /convertible/i.test(ua))
       );
     };
 
+    // Check if device is in tablet mode
     const isTabletMode = () => {
       try {
-        return window.matchMedia('(-ms-system-state: tablet)').matches ||
-               window.matchMedia('(tablet-mode: active)').matches;
+        return (
+          window.matchMedia('(-ms-system-state: tablet)').matches ||
+          window.matchMedia('(tablet-mode: active)').matches ||
+          (detectDeviceType() !== "Desktop" && isTouchDevice())
+        );
       } catch (e) {
         return false;
       }
@@ -46,14 +61,27 @@ const useInputMethod = () => {
 
     // Check for physical keyboard characteristics
     const hasPhysicalKeyboardCharacteristics = (e) => {
-      // Physical keyboards typically have these characteristics
+      const device = detectDeviceType();
+      
+      // For mobile/tablet devices, physical keyboard needs stronger verification
+      if (device === "Mobile" || device === "Tablet") {
+        return (
+          e.isTrusted &&
+          !e.sourceCapabilities?.firesTouchEvents &&
+          (e.ctrlKey || e.altKey || e.metaKey) && // Modifier keys indicate physical keyboard
+          !lastKeyWasComposition &&
+          e.keyCode !== 229
+        );
+      }
+
+      // For desktop, we're more lenient
       return (
-        e.isTrusted && // Event is trusted
-        !e.sourceCapabilities?.firesTouchEvents && // Not from touch input
-        e.keyCode !== 229 && // Not IME composition
-        !lastKeyWasComposition && // Not part of composition
+        e.isTrusted &&
+        !e.sourceCapabilities?.firesTouchEvents &&
+        e.keyCode !== 229 &&
+        !lastKeyWasComposition &&
         (
-          e.ctrlKey || // Modifier keys are common on physical keyboards
+          e.ctrlKey ||
           e.altKey ||
           e.metaKey ||
           e.key === 'Tab' ||
@@ -68,25 +96,29 @@ const useInputMethod = () => {
       );
     };
 
-    // Check characteristics of virtual keyboard input
+    // Check for virtual keyboard characteristics
     const hasVirtualKeyboardCharacteristics = (e) => {
       if (hasPhysicalKeyboardCharacteristics(e)) {
         return false;
       }
 
-      // Virtual keyboards often have these characteristics
+      const device = detectDeviceType();
       const virtualCharacteristics = [
         e.keyCode === 229, // IME composition
         !e.isTrusted, // Synthetic event
         e.sourceCapabilities?.firesTouchEvents, // Touch-based input
         lastKeyWasComposition, // Part of IME composition
-        (e.timeStamp - lastInputTime < 20 && isTouchDevice()), // Very fast typing on touch device
+        device !== "Desktop" && isTouchDevice(), // Non-desktop touch device
         keyEventSources.size > 1 // Mixed input sources
       ];
 
-      // Count how many virtual characteristics are present
-      const virtualScore = virtualCharacteristics.filter(Boolean).length;
-      return virtualScore >= 2; // If 2 or more characteristics match, likely virtual
+      // For mobile/tablet, we're more lenient in detecting virtual keyboards
+      if (device === "Mobile" || device === "Tablet") {
+        return virtualCharacteristics.filter(Boolean).length >= 1;
+      }
+
+      // For desktop, we need more confidence
+      return virtualCharacteristics.filter(Boolean).length >= 2;
     };
 
     const handleCompositionStart = () => {
@@ -98,49 +130,43 @@ const useInputMethod = () => {
     };
 
     const handleKeyboardInput = (e) => {
-      const timeSinceLastInput = Date.now() - lastInputTime;
-      lastInputTime = Date.now();
+      const currentTime = Date.now();
+      const timeSinceLastInput = currentTime - lastInputTime;
+      lastInputTime = currentTime;
 
-      // Store information about this key event
       keyEventSources.add(e.sourceCapabilities?.firesTouchEvents);
+      const device = detectDeviceType();
 
-      // If it's clearly a physical keyboard, reset virtual keyboard state
+      // Handle physical keyboard
       if (hasPhysicalKeyboardCharacteristics(e)) {
-        consecutiveVirtualKeys = 0;
-        setIsVirtualKeyboard(false);
         setInputMethod("Physical Keyboard");
         setLastInputMethod("Keyboard");
+        setIsVirtualKeyboard(false);
         return;
       }
 
-      // Check for virtual keyboard characteristics
-      if (hasVirtualKeyboardCharacteristics(e)) {
-        consecutiveVirtualKeys++;
-      } else {
-        consecutiveVirtualKeys = Math.max(0, consecutiveVirtualKeys - 1);
-      }
-
-      // Only set as virtual keyboard if we're very confident
-      const isVirtual = 
-        (consecutiveVirtualKeys >= VIRTUAL_KEY_THRESHOLD) ||
-        (isTabletMode() && isTouchDevice()) ||
-        (lastKeyWasComposition && e.keyCode === 229);
-
-      if (isVirtual) {
+      // Handle virtual keyboard
+      if (
+        hasVirtualKeyboardCharacteristics(e) ||
+        (device !== "Desktop" && timeSinceLastInput < 50) // Fast typing on mobile/tablet likely means virtual
+      ) {
         setInputMethod("Virtual Keyboard");
         setLastInputMethod("Touchscreen");
         setIsVirtualKeyboard(true);
-      } else {
-        setInputMethod("Physical Keyboard");
-        setLastInputMethod("Keyboard");
-        setIsVirtualKeyboard(false);
+        return;
       }
+
+      // Default to physical keyboard if we're unsure
+      setInputMethod("Physical Keyboard");
+      setLastInputMethod("Keyboard");
+      setIsVirtualKeyboard(false);
     };
 
-    const handleTouchInput = () => {
+    const handleTouchInput = (e) => {
       lastInputTime = Date.now();
+      const device = detectDeviceType();
       
-      if (isTabletMode()) {
+      if (device !== "Desktop") {
         setInputMethod("Virtual Keyboard");
         setIsVirtualKeyboard(true);
       } else {
@@ -151,9 +177,10 @@ const useInputMethod = () => {
 
     const handlePointerInput = (event) => {
       lastInputTime = Date.now();
+      const device = detectDeviceType();
 
       if (event.pointerType === "touch") {
-        if (isTabletMode()) {
+        if (device !== "Desktop") {
           setInputMethod("Virtual Keyboard");
           setIsVirtualKeyboard(true);
         } else {
@@ -170,12 +197,10 @@ const useInputMethod = () => {
     };
 
     const handleFocus = () => {
-      focusTimestamp = Date.now();
       keyEventSources.clear();
-      consecutiveVirtualKeys = 0;
+      const device = detectDeviceType();
       
-      // Only set virtual keyboard if explicitly in tablet mode
-      if (isConvertibleDevice() && isTabletMode()) {
+      if (device !== "Desktop" && isTouchDevice()) {
         setIsVirtualKeyboard(true);
         setInputMethod("Virtual Keyboard");
         setLastInputMethod("Touchscreen");
@@ -186,21 +211,20 @@ const useInputMethod = () => {
       setTimeout(() => {
         if (!document.activeElement?.tagName?.match(/input|textarea/i)) {
           setIsVirtualKeyboard(false);
-          consecutiveVirtualKeys = 0;
         }
       }, 500);
     };
 
     // Initial detection
-    const detectDevice = () => {
-      const isTouch = isTouchDevice();
-      const isConvertible = isConvertibleDevice();
+    const detectInitialState = () => {
+      const device = detectDeviceType();
+      setDeviceType(device);
       
-      if (isConvertible && isTabletMode()) {
+      if (device !== "Desktop" && isTouchDevice()) {
         setInputMethod("Virtual Keyboard");
         setLastInputMethod("Touchscreen");
         setIsVirtualKeyboard(true);
-      } else if (isTouch) {
+      } else if (isTouchDevice()) {
         setInputMethod("Touchscreen");
         setLastInputMethod("Touchscreen");
       } else {
@@ -219,7 +243,7 @@ const useInputMethod = () => {
     document.addEventListener("compositionend", handleCompositionEnd);
 
     // Initial detection
-    detectDevice();
+    detectInitialState();
 
     // Cleanup
     return () => {
@@ -233,7 +257,7 @@ const useInputMethod = () => {
     };
   }, [isVirtualKeyboard]);
 
-  return { inputMethod, lastInputMethod };
+  return { inputMethod, lastInputMethod, deviceType };
 };
 
 export default useInputMethod;
