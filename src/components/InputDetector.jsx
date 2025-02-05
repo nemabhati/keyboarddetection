@@ -3,44 +3,72 @@ import useInputMethod from '../hooks/useInputMethod';
 
 const InputDetector = () => {
   const [inputValue, setInputValue] = useState('');
-  const { inputMethod } = useInputMethod();
+  const { inputMethod, hasInteracted } = useInputMethod();
 
   const getInputStyle = () => {
     const style = {
       padding: '10px',
-      margin: '10px',
-      width: '80%',
-      maxWidth: '400px',
+      margin: '10px 0',
       fontSize: '16px',
-      borderRadius: '8px',
-      transition: 'all 0.3s ease'
+      borderRadius: '4px',
+      border: '1px solid #ccc',
+      width: '100%',
+      maxWidth: '400px'
     };
 
-    const colors = {
-      'Physical Keyboard': { border: '#4a90e2', bg: '#f0f8ff' },
-      'Virtual Keyboard': { border: '#9b59b6', bg: '#f5eef8' },
-      'Touchscreen': { border: '#2ecc71', bg: '#eafaf1' },
-      'Mouse': { border: '#e67e22', bg: '#fef5e7' },
-      'Stylus': { border: '#e74c3c', bg: '#fdedec' }
-    };
+    // Add color based on input method
+    if (inputMethod === "Physical Keyboard") {
+      style.border = '2px solid #4CAF50';
+      style.backgroundColor = '#f1f8e9';
+    } else if (inputMethod === "Virtual Keyboard") {
+      style.border = '2px solid #2196F3';
+      style.backgroundColor = '#e3f2fd';
+    } else if (inputMethod === "Stylus") {
+      style.border = '2px solid #9C27B0';
+      style.backgroundColor = '#f3e5f5';
+    }
 
-    const color = colors[inputMethod] || { border: '#95a5a6', bg: '#f8f9f9' };
-    return {
-      ...style,
-      border: `2px solid ${color.border}`,
-      backgroundColor: color.bg
-    };
+    return style;
   };
 
+  const getMessageStyle = (isPrompt) => ({
+    padding: '10px',
+    margin: '10px 0',
+    borderRadius: '4px',
+    backgroundColor: isPrompt ? '#fff3e0' : '#e8f5e9',
+    color: isPrompt ? '#e65100' : '#2e7d32',
+    border: `1px solid ${isPrompt ? '#ffe0b2' : '#c8e6c9'}`,
+    fontWeight: isPrompt ? 'bold' : 'normal',
+    textAlign: 'center',
+    maxWidth: '400px',
+    width: '100%'
+  });
+
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      padding: '20px', 
-      fontFamily: 'Arial, sans-serif' 
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      padding: '20px',
+      fontFamily: 'Arial, sans-serif'
     }}>
       <h2>Input Method Detector</h2>
+      <div style={{
+        maxWidth: '400px',
+        width: '80%',
+        marginBottom: '20px'
+      }}>
+        {!hasInteracted ? (
+          <div style={getMessageStyle(true)}>
+            Please enter any key to detect your keyboard type
+          </div>
+        ) : (
+          <div style={getMessageStyle(false)}>
+            Current Input Method: {inputMethod}
+          </div>
+        )}
+      </div>
+
       <input
         type="text"
         value={inputValue}
@@ -48,17 +76,6 @@ const InputDetector = () => {
         placeholder="Type something here..."
         style={getInputStyle()}
       />
-      <div style={{
-        marginTop: '20px',
-        padding: '15px',
-        borderRadius: '8px',
-        backgroundColor: '#f8f9f9',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        maxWidth: '400px',
-        width: '80%'
-      }}>
-        <p>Current Input Method: {inputMethod}</p>
-      </div>
     </div>
   );
 };

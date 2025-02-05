@@ -2,9 +2,13 @@ import { useState, useEffect } from "react";
 
 const useInputMethod = () => {
   const [inputMethod, setInputMethod] = useState("Unknown");
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
     const detectKeyboardType = (e) => {
+      // Mark that we've had an interaction
+      setHasInteracted(true);
+
       // 1. Check for virtual keyboard using viewport changes
       if (window.visualViewport?.height < window.innerHeight) {
         return "Virtual Keyboard";
@@ -55,7 +59,9 @@ const useInputMethod = () => {
       };
 
       // Default to physical keyboard if we have keyboard-like characteristics
-      if (inputCharacteristics.hasHover && inputCharacteristics.hasFinePointer && !inputCharacteristics.isTouch) {
+      if (inputCharacteristics.hasHover && 
+          inputCharacteristics.hasFinePointer && 
+          !inputCharacteristics.isTouch) {
         return "Physical Keyboard";
       }
 
@@ -69,6 +75,7 @@ const useInputMethod = () => {
     };
 
     const handleTouchInput = (e) => {
+      setHasInteracted(true);
       if (e instanceof TouchEvent) {
         const touch = e.changedTouches[0];
         if (touch?.touchType === 'stylus') {
@@ -80,13 +87,17 @@ const useInputMethod = () => {
     };
 
     const handlePointerInput = (e) => {
+      setHasInteracted(true);
       if (e instanceof PointerEvent) {
         switch(e.pointerType) {
           case "touch":
             setInputMethod("Virtual Keyboard");
             break;
           case "mouse":
-            setInputMethod("Physical Keyboard");
+            // Don't change to physical keyboard on mouse movement if we're sure it's virtual
+            if (inputMethod !== "Virtual Keyboard") {
+              setInputMethod("Physical Keyboard");
+            }
             break;
           case "pen":
             setInputMethod("Stylus");
@@ -95,34 +106,37 @@ const useInputMethod = () => {
       }
     };
 
-    // Initial detection based on input characteristics
-    const initialInputCharacteristics = {
-      hasHover: matchMedia('(hover: hover)').matches,
-      hasFinePointer: matchMedia('(pointer: fine)').matches,
-      isTouch: 'ontouchstart' in window
-    };
-
-    if (initialInputCharacteristics.hasHover && initialInputCharacteristics.hasFinePointer && !initialInputCharacteristics.isTouch) {
-      setInputMethod("Physical Keyboard");
-    } else {
-      setInputMethod("Virtual Keyboard");
-    }
-
     // Add event listeners
     const options = { passive: true };
     window.addEventListener("keydown", handleKeyboardInput, options);
     window.addEventListener("touchstart", handleTouchInput, options);
     window.addEventListener("pointerdown", handlePointerInput, options);
 
+    // Watch for virtual keyboard changes
+    if ('virtualKeyboard' in navigator) {
+      // @ts-ignore - New API, TypeScript doesn't recognize it yet
+      navigator.virtualKeyboard.addEventListener('geometrychange', () => {
+        setHasInteracted(true);
+        if (navigator.virtualKeyboard.boundingRect.height > 0) {
+          setInputMethod("Virtual Keyboard");
+        }
+      });
+    }
+
     return () => {
       window.removeEventListener("keydown", handleKeyboardInput);
       window.removeEventListener("touchstart", handleTouchInput);
       window.removeEventListener("pointerdown", handlePointerInput);
+      if ('virtualKeyboard' in navigator) {
+        // @ts-ignore
+        navigator.virtualKeyboard.removeEventListener('geometrychange');
+      }
     };
-  }, []);
+  }, [inputMethod]); // Add inputMethod to dependencies
 
   return {
-    inputMethod,
+    inputMethod: hasInteracted ? inputMethod : "Unknown",
+    hasInteracted,
     isPhysicalKeyboard: () => inputMethod === "Physical Keyboard",
     isVirtualKeyboard: () => inputMethod === "Virtual Keyboard",
     isStylus: () => inputMethod === "Stylus"
