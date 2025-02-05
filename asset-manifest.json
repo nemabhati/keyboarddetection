@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/keyboarddetection/static/js/main.06ab8675.js",
+    "main.js": "/keyboarddetection/static/js/main.4ffcfb19.js",
     "index.html": "/keyboarddetection/index.html",
-    "main.06ab8675.js.map": "/keyboarddetection/static/js/main.06ab8675.js.map"
+    "main.4ffcfb19.js.map": "/keyboarddetection/static/js/main.4ffcfb19.js.map"
   },
   "entrypoints": [
-    "static/js/main.06ab8675.js"
+    "static/js/main.4ffcfb19.js"
   ]
 }
