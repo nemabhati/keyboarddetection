@@ -13,10 +13,10 @@ const InputDetector = () => {
       borderRadius: '4px',
       border: '1px solid #ccc',
       width: '100%',
-      maxWidth: '400px'
+      maxWidth: '400px',
+      boxSizing: 'border-box'
     };
 
-    // Add color based on input method
     if (inputMethod === "Physical Keyboard") {
       style.border = '2px solid #4CAF50';
       style.backgroundColor = '#f1f8e9';
@@ -41,41 +41,59 @@ const InputDetector = () => {
     fontWeight: isPrompt ? 'bold' : 'normal',
     textAlign: 'center',
     maxWidth: '400px',
-    width: '100%'
+    width: '100%',
+    boxSizing: 'border-box'
   });
 
   return (
     <div style={{
+      flex: 1,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       padding: '20px',
-      fontFamily: 'Arial, sans-serif'
+      boxSizing: 'border-box',
+      fontFamily: 'Arial, sans-serif',
+      overflow: 'auto',
+      WebkitOverflowScrolling: 'touch'
     }}>
-      <h2>Input Method Detector</h2>
       <div style={{
-        maxWidth: '400px',
-        width: '80%',
-        marginBottom: '20px'
+        width: '100%',
+        maxWidth: '600px',
+        margin: '0 auto',
+        padding: '20px',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
       }}>
-        {!hasInteracted ? (
-          <div style={getMessageStyle(true)}>
-            Please enter any key to detect your keyboard type
-          </div>
-        ) : (
-          <div style={getMessageStyle(false)}>
-            Current Input Method: {inputMethod}
-          </div>
-        )}
-      </div>
+        <h2 style={{ margin: '0 0 20px 0' }}>Input Method Detector</h2>
+        
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          marginBottom: '20px',
+          boxSizing: 'border-box'
+        }}>
+          {!hasInteracted ? (
+            <div style={getMessageStyle(true)}>
+              Please enter any key to detect your keyboard type
+            </div>
+          ) : (
+            <div style={getMessageStyle(false)}>
+              Current Input Method: {inputMethod}
+            </div>
+          )}
+        </div>
 
-      <input
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        placeholder="Type something here..."
-        style={getInputStyle()}
-      />
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Type something here..."
+          style={getInputStyle()}
+        />
+      </div>
     </div>
   );
 };

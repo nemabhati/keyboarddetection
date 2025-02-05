@@ -6,7 +6,6 @@ const useInputMethod = () => {
 
   useEffect(() => {
     const detectKeyboardType = (e) => {
-      // Mark that we've had an interaction
       setHasInteracted(true);
 
       // 1. Check for virtual keyboard using viewport changes
@@ -106,6 +105,14 @@ const useInputMethod = () => {
       }
     };
 
+    const handleVirtualKeyboardChange = () => {
+      setHasInteracted(true);
+      // @ts-ignore
+      if (navigator.virtualKeyboard?.boundingRect.height > 0) {
+        setInputMethod("Virtual Keyboard");
+      }
+    };
+
     // Add event listeners
     const options = { passive: true };
     window.addEventListener("keydown", handleKeyboardInput, options);
@@ -115,21 +122,16 @@ const useInputMethod = () => {
     // Watch for virtual keyboard changes
     if ('virtualKeyboard' in navigator) {
       // @ts-ignore - New API, TypeScript doesn't recognize it yet
-      navigator.virtualKeyboard.addEventListener('geometrychange', () => {
-        setHasInteracted(true);
-        if (navigator.virtualKeyboard.boundingRect.height > 0) {
-          setInputMethod("Virtual Keyboard");
-        }
-      });
+      navigator.virtualKeyboard.addEventListener('geometrychange', handleVirtualKeyboardChange);
     }
 
     return () => {
-      window.removeEventListener("keydown", handleKeyboardInput);
-      window.removeEventListener("touchstart", handleTouchInput);
-      window.removeEventListener("pointerdown", handlePointerInput);
+      window.removeEventListener("keydown", handleKeyboardInput, options);
+      window.removeEventListener("touchstart", handleTouchInput, options);
+      window.removeEventListener("pointerdown", handlePointerInput, options);
       if ('virtualKeyboard' in navigator) {
         // @ts-ignore
-        navigator.virtualKeyboard.removeEventListener('geometrychange');
+        navigator.virtualKeyboard.removeEventListener('geometrychange', handleVirtualKeyboardChange);
       }
     };
   }, [inputMethod]); // Add inputMethod to dependencies

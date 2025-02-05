@@ -1,9 +1,10 @@
 import React from 'react';
 import InputDetector from './components/InputDetector';
+import './styles.css';
 
 function App() {
   return (
-    <div className="App">
+    <div className="app-container">
       <InputDetector />
     </div>
   );
