@@ -3,10 +3,10 @@ import useInputMethod from '../hooks/useInputMethod';
 
 const InputDetector = () => {
   const [inputValue, setInputValue] = useState('');
-  const { inputMethod, deviceType } = useInputMethod();
+  const { inputMethod } = useInputMethod();
 
   const getInputStyle = () => {
-    const baseStyle = {
+    const style = {
       padding: '10px',
       margin: '10px',
       width: '80%',
@@ -16,76 +16,30 @@ const InputDetector = () => {
       transition: 'all 0.3s ease'
     };
 
-    switch (inputMethod) {
-      case 'Physical Keyboard':
-        return {
-          ...baseStyle,
-          border: '2px solid #4a90e2',
-          backgroundColor: '#f0f8ff'
-        };
-      case 'Virtual Keyboard':
-        return {
-          ...baseStyle,
-          border: '2px solid #9b59b6',
-          backgroundColor: '#f5eef8'
-        };
-      case 'Touchscreen':
-        return {
-          ...baseStyle,
-          border: '2px solid #2ecc71',
-          backgroundColor: '#eafaf1'
-        };
-      case 'Mouse':
-        return {
-          ...baseStyle,
-          border: '2px solid #e67e22',
-          backgroundColor: '#fef5e7'
-        };
-      case 'Stylus':
-        return {
-          ...baseStyle,
-          border: '2px solid #e74c3c',
-          backgroundColor: '#fdedec'
-        };
-      default:
-        return {
-          ...baseStyle,
-          border: '2px solid #95a5a6',
-          backgroundColor: '#f8f9f9'
-        };
-    }
-  };
+    const colors = {
+      'Physical Keyboard': { border: '#4a90e2', bg: '#f0f8ff' },
+      'Virtual Keyboard': { border: '#9b59b6', bg: '#f5eef8' },
+      'Touchscreen': { border: '#2ecc71', bg: '#eafaf1' },
+      'Mouse': { border: '#e67e22', bg: '#fef5e7' },
+      'Stylus': { border: '#e74c3c', bg: '#fdedec' }
+    };
 
-  const containerStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    padding: '20px',
-    fontFamily: 'Arial, sans-serif'
-  };
-
-  const infoStyle = {
-    marginTop: '20px',
-    padding: '15px',
-    borderRadius: '8px',
-    backgroundColor: '#f8f9f9',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    maxWidth: '400px',
-    width: '80%'
-  };
-
-  const labelStyle = {
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginRight: '8px'
-  };
-
-  const valueStyle = {
-    color: '#34495e'
+    const color = colors[inputMethod] || { border: '#95a5a6', bg: '#f8f9f9' };
+    return {
+      ...style,
+      border: `2px solid ${color.border}`,
+      backgroundColor: color.bg
+    };
   };
 
   return (
-    <div style={containerStyle}>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      padding: '20px', 
+      fontFamily: 'Arial, sans-serif' 
+    }}>
       <h2>Input Method Detector</h2>
       <input
         type="text"
@@ -94,23 +48,16 @@ const InputDetector = () => {
         placeholder="Type something here..."
         style={getInputStyle()}
       />
-      <div style={infoStyle}>
-        <p>
-          <span style={labelStyle}>Device Type:</span>
-          <span style={valueStyle}>{deviceType}</span>
-        </p>
-        <p>
-          <span style={labelStyle}>Current Input Method:</span>
-          <span style={valueStyle}>{inputMethod}</span>
-        </p>
-      </div>
-      <div style={{...infoStyle, marginTop: '10px'}}>
-        <h3 style={{margin: '0 0 10px 0', color: '#2c3e50'}}>Color Guide:</h3>
-        <p style={{margin: '5px 0'}}>🔵 Blue - Physical Keyboard</p>
-        <p style={{margin: '5px 0'}}>💜 Purple - Virtual Keyboard</p>
-        <p style={{margin: '5px 0'}}>💚 Green - Touchscreen</p>
-        <p style={{margin: '5px 0'}}>🟧 Orange - Mouse</p>
-        <p style={{margin: '5px 0'}}>❤️ Red - Stylus</p>
+      <div style={{
+        marginTop: '20px',
+        padding: '15px',
+        borderRadius: '8px',
+        backgroundColor: '#f8f9f9',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        maxWidth: '400px',
+        width: '80%'
+      }}>
+        <p>Current Input Method: {inputMethod}</p>
       </div>
     </div>
   );
